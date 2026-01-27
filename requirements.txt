@@ -8,3 +8,5 @@ pytest
 httpx
 asyncpg
 strawberry-graphql[fastapi]
+grpcio
+grpcio-tools

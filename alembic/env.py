@@ -13,7 +13,7 @@ from sqlmodel import SQLModel
 
 from alembic import context
 from app.core.config import settings
-from app.models.item import Item  
+from app.models.item import Producto  
 
 # Configuración de Alembic (lee el alembic.ini)
 config = context.config

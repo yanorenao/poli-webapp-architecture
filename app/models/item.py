@@ -1,16 +1,22 @@
 from typing import Optional
 from sqlmodel import Field, SQLModel
 
-class ItemBase(SQLModel):
-    title: str
-    description: Optional[str] = None
+# Clase base con los atributos requeridos 
+class ProductoBase(SQLModel):
+    nombre: str  
+    descripcion: Optional[str] = None  
+    precio: float  
 
-class Item(ItemBase, table=True):
+# Entidad para la base de datos 
+class Producto(ProductoBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
-class ItemCreate(ItemBase):
+# Esquema para la creación de productos
+class ProductoCreate(ProductoBase):
     pass
 
-class ItemUpdate(SQLModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
+# Esquema para actualizaciones 
+class ProductoUpdate(SQLModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    precio: Optional[float] = None

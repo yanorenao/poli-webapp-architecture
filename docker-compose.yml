@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Servicio de Base de Datos PostgreSQL
   db:
     image: postgres:15
     environment:
@@ -11,16 +12,16 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Esto comprueba cada 5 segundos si la BD ya responde
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # Servicio Web: FastAPI + GraphQL
   web:
     build: .
-    # Intentamos ejecutar la migración al inicio. Si falla, el contenedor se reiniciará.
+    # Ejecuta migraciones de Alembic antes de iniciar el servidor uvicorn
     command: bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - .:/app
@@ -31,7 +32,22 @@ services:
       PYTHONPATH: /app
     depends_on:
       db:
-        condition: service_healthy  
+        condition: service_healthy
+
+  # Servicio gRPC: Servidor de comunicación punto a punto
+  grpc-server:
+    build: .
+    command: bash -c "python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. app/grpc/producto.proto && python -m app.grpc.server"
+    volumes:
+      - .:/app
+    ports:
+      - "50051:50051"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/mydatabase
+      PYTHONPATH: /app
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
