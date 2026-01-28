@@ -1,40 +1,54 @@
-# Scalable FastAPI Backend 🚀
+# 🚀 Backend Híbrido: REST + GraphQL + gRPC
 
-Este proyecto es un backend **robusto, modular y escalable**, construido con **Python (FastAPI)** y **PostgreSQL**, siguiendo principios de **Clean Architecture**, **Separation of Concerns** y el **Patrón Repositorio**. La arquitectura está diseñada para permitir la evolución hacia otros protocolos de comunicación (GraphQL, gRPC, mensajería) sin reescribir la lógica de negocio.
+Este proyecto implementa una arquitectura de backend moderna, escalable y desacoplada que expone **tres interfaces de comunicación simultáneas** sobre una misma lógica de negocio y una única base de datos:
+
+1. **REST API** (FastAPI)
+2. **GraphQL** (Strawberry)
+3. **gRPC** (Google Remote Procedure Call)
+
+La solución está diseñada siguiendo principios de **Clean Architecture**, **Dependency Inversion** y el **Patrón Repositorio**, garantizando mantenibilidad, testabilidad y evolución tecnológica sin reescritura del core.
 
 ---
 
 ## 🏗️ Arquitectura del Proyecto
 
-La aplicación se organiza en capas claramente desacopladas para maximizar mantenibilidad, testabilidad y escalabilidad.
+La aplicación se organiza en capas claramente desacopladas. Cada protocolo actúa como una *capa de entrada* independiente que reutiliza la misma lógica de negocio y acceso a datos.
 
-### 1. Capa de Presentación (API REST)
+### 1. Capa de Presentación (REST / GraphQL / gRPC)
 
-**Ruta:** `app/api`
+**Rutas:**
 
-* Expone los endpoints HTTP REST.
-* Orquesta los casos de uso sin contener lógica de negocio.
-* Valida y serializa datos de entrada/salida mediante **Pydantic**.
-* Actúa como una *puerta de entrada* a la aplicación.
+* `app/api` – REST API (FastAPI)
+* `app/graphql` – GraphQL (Strawberry)
+* `app/grpc` – gRPC (Protobuf + grpcio)
 
-> En caso de incorporar GraphQL o gRPC, se crearían nuevas capas de entrada (`app/graphql`, `app/grpc`) reutilizando íntegramente los repositorios.
+Responsabilidades:
+
+* Exponer contratos de comunicación.
+* Orquestar casos de uso sin lógica de negocio.
+* Validar y serializar datos de entrada/salida.
+* Delegar toda la lógica a la capa de dominio.
+
+---
 
 ### 2. Capa de Repositorios (Dominio / Acceso a Datos)
 
 **Ruta:** `app/repositories`
 
-* Encapsula la lógica de acceso a datos y operaciones CRUD.
-* Implementa el **Patrón Repositorio**.
-* Aísla el ORM del resto de la aplicación.
-* Garantiza independencia de la infraestructura.
+* Implementa el **Repository Pattern**.
+* Encapsula operaciones CRUD y consultas complejas.
+* Aísla completamente el ORM del resto del sistema.
+* Permite cambiar PostgreSQL, SQLModel u ORM sin impacto en la capa superior.
+
+---
 
 ### 3. Capa de Modelos y Core
 
 **Rutas:** `app/models`, `app/core`
 
-* Define las entidades persistentes usando **SQLModel**.
-* Centraliza la configuración de base de datos y variables de entorno.
-* Proporciona el motor asíncrono y la sesión de base de datos.
+* Define entidades persistentes con **SQLModel**.
+* Centraliza configuración, variables de entorno y settings.
+* Gestiona motor asíncrono, sesiones y dependencias de base de datos.
 
 ---
 
@@ -43,17 +57,19 @@ La aplicación se organiza en capas claramente desacopladas para maximizar mante
 ```text
 .
 ├── app/
-│   ├── api/            # Endpoints REST (Controladores)
-│   ├── core/           # Configuración y conexión a la base de datos
-│   ├── models/         # Modelos SQLModel / Esquemas
-│   ├── repositories/   # Lógica de negocio y acceso a datos
-│   └── main.py         # Punto de entrada FastAPI
-├── alembic/            # Migraciones de base de datos
-├── tests/              # Pruebas unitarias e integración
-├── docker-compose.yml  # Orquestación de servicios
-├── Dockerfile          # Imagen de la aplicación
-├── alembic.ini         # Configuración Alembic
-└── requirements.txt    # Dependencias
+│   ├── api/              # Endpoints REST (FastAPI)
+│   ├── graphql/          # Esquemas y resolvers GraphQL
+│   ├── grpc/             # Servicios gRPC y archivos .proto
+│   ├── core/             # Configuración y base de datos
+│   ├── models/           # Modelos SQLModel
+│   ├── repositories/     # Lógica de dominio y acceso a datos
+│   └── main.py           # Punto de entrada unificado
+├── alembic/              # Migraciones de base de datos
+├── tests/                # Pruebas unitarias e integración
+├── docker-compose.yml    # Orquestación de servicios
+├── Dockerfile            # Imagen de la aplicación
+├── alembic.ini           # Configuración Alembic
+└── requirements.txt      # Dependencias
 ```
 
 ---
@@ -66,8 +82,10 @@ La aplicación se organiza en capas claramente desacopladas para maximizar mante
 * **Base de Datos:** PostgreSQL 15
 * **Migraciones:** Alembic
 * **Driver Asíncrono:** asyncpg
-* **Containerización:** Docker & Docker Compose
+* **GraphQL:** Strawberry (schema-first)
+* **gRPC:** grpcio + Protobuf
 * **Testing:** Pytest
+* **Containerización:** Docker & Docker Compose
 
 ---
 
@@ -75,11 +93,11 @@ La aplicación se organiza en capas claramente desacopladas para maximizar mante
 
 ### 1. Prerrequisitos
 
-Asegúrate de tener instalados:
-
 * Docker
 * Docker Compose
 * Git
+
+---
 
 ### 2. Clonar el Repositorio
 
@@ -88,9 +106,11 @@ git clone <URL_DEL_REPOSITORIO>
 cd <NOMBRE_DEL_PROYECTO>
 ```
 
+---
+
 ### 3. Variables de Entorno
 
-Crea un archivo `.env` en la raíz del proyecto (recomendado):
+Crear archivo `.env` en la raíz del proyecto:
 
 ```ini
 DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/mydatabase
@@ -98,18 +118,23 @@ DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/mydatabase
 
 > Los valores por defecto permiten ejecutar el proyecto directamente con Docker Compose.
 
-### 4. Construir y Levantar los Servicios
+---
+
+### 4. Construir y Levantar Servicios
 
 ```bash
 docker-compose up -d --build
 ```
 
-Esto iniciará:
+Servicios expuestos:
 
-* PostgreSQL en el puerto `5432`.
-* FastAPI en el puerto `8000`.
+* PostgreSQL → `5432`
+* FastAPI → `8000`
+* gRPC → `50051`
 
-La aplicación espera automáticamente a que la base de datos esté disponible y ejecuta las migraciones.
+La aplicación espera automáticamente la base de datos y ejecuta migraciones.
+
+---
 
 ### 5. Verificar Logs
 
@@ -117,7 +142,7 @@ La aplicación espera automáticamente a que la base de datos esté disponible y
 docker-compose logs -f web
 ```
 
-Deberías observar:
+Salida esperada:
 
 ```text
 Application startup complete.
@@ -127,9 +152,9 @@ Application startup complete.
 
 ## 🗄️ Gestión de Base de Datos (Alembic)
 
-Todos los comandos deben ejecutarse dentro del contenedor `web`.
+Ejecutar siempre dentro del contenedor `web`.
 
-### Crear una Nueva Migración
+### Crear Migración
 
 ```bash
 docker-compose exec web alembic revision --autogenerate -m "Descripción del cambio"
@@ -145,45 +170,93 @@ docker-compose exec web alembic upgrade head
 
 ## ✅ Ejecución de Pruebas
 
-El proyecto incluye pruebas unitarias y de integración.
-
 ```bash
 docker-compose exec web pytest
 ```
 
+Incluye:
+
+* Pruebas unitarias de repositorios.
+* Pruebas de integración para REST, GraphQL y gRPC.
+
 ---
 
-## 📚 Documentación de la API
+## 📡 Endpoints y Servicios
 
-Una vez en ejecución:
+| Protocolo | URL / Dirección                                                | Descripción |
+| --------- | -------------------------------------------------------------- | ----------- |
+| REST API  | [http://localhost:8000/docs](http://localhost:8000/docs)       | Swagger UI  |
+| GraphQL   | [http://localhost:8000/graphql](http://localhost:8000/graphql) | GraphiQL    |
+| gRPC      | localhost:50051                                                | RPC binario |
 
-* **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+---
 
-### Ejemplo de Endpoints CRUD
+### Ejemplo REST CRUD
 
-* `POST   /api/v1/items/` – Crear un item
-* `GET    /api/v1/items/` – Listar items
-* `GET    /api/v1/items/{id}` – Obtener un item
-* `PATCH  /api/v1/items/{id}` – Actualizar un item
-* `DELETE /api/v1/items/{id}` – Eliminar un item
+* `POST   /api/v1/items/`
+* `GET    /api/v1/items/`
+* `GET    /api/v1/items/{id}`
+* `PATCH  /api/v1/items/{id}`
+* `DELETE /api/v1/items/{id}`
+
+---
+
+## 🕸️ Ejemplo GraphQL
+
+```graphql
+mutation {
+  createProducto(
+    nombre: "Teclado Mecánico"
+    precio: 120.50
+    descripcion: "Switch Cherry MX Blue"
+  ) {
+    id
+    nombre
+  }
+}
+```
+
+---
+
+## ⚡ Cómo probar gRPC
+
+El servidor escucha en el puerto `50051`.
+
+Archivo `.proto`:
+
+```
+app/grpc/producto.proto
+```
+
+### Usando Postman
+
+1. New gRPC Request.
+2. URL: `localhost:50051`.
+3. Importar archivo `.proto`.
+4. Ejecutar `CreateProducto`:
+
+```json
+{
+  "nombre": "Monitor gRPC",
+  "descripcion": "Test desde Postman",
+  "precio": 300.00
+}
+```
 
 ---
 
 ## 🔮 Escalabilidad Futura
 
-La lógica de negocio está completamente desacoplada del protocolo de comunicación.
-
-* **GraphQL:** Integración con Strawberry o Ariadne reutilizando los repositorios.
-* **gRPC:** Implementación de servicios `.proto` llamando a la misma capa de dominio.
-* **Mensajería:** Posible integración con Kafka, RabbitMQ o eventos asincrónicos.
+* Reutilización total del dominio para nuevos protocolos.
+* Integración con mensajería (Kafka, RabbitMQ).
+* Separación futura en microservicios sin refactor del core.
 
 ---
 
 ## 🧪 Buenas Prácticas Aplicadas
 
 * Clean Architecture
-* Dependency Inversion
+* Dependency Inversion Principle
 * Repository Pattern
 * Async I/O end-to-end
 * Infraestructura desacoplada
@@ -191,4 +264,4 @@ La lógica de negocio está completamente desacoplada del protocolo de comunicac
 
 ---
 
-**Hecho con ❤️ Python y FastAPI.**
+**Hecho con ❤️ usando Python y FastAPI.**

@@ -57,12 +57,19 @@ class Mutation:
         session = info.context["session"]
         repo = ProductoRepository(session)
         
-        # Solo se actualizan los campos enviados (evita sobreescribir con None)
-        producto_data = ProductoUpdate(
-            nombre=nombre, 
-            precio=precio, 
-            descripcion=descripcion
-        )
+        # 1. Crear diccionario solo con los valores que NO son None
+        update_data = {}
+        if nombre is not None:
+            update_data["nombre"] = nombre
+        if precio is not None:
+            update_data["precio"] = precio
+        if descripcion is not None:
+            update_data["descripcion"] = descripcion
+            
+        # 2. Pasar los datos desempaquetados al modelo
+        # Esto asegura que Pydantic marque los campos como "set" solo si venían en la petición
+        producto_data = ProductoUpdate(**update_data)
+        
         updated = await repo.update(id, producto_data)
         if updated:
             return ProductoType.from_pydantic(updated)
